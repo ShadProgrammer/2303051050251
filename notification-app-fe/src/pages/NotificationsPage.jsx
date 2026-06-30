@@ -1,4 +1,7 @@
 import { useState } from "react";
+// import { Link } from "react-router-dom";
+// import { Button } from "@mui/material";
+
 import {
   Alert,
   Badge,
@@ -18,42 +21,69 @@ import { useNotifications } from "../hooks/useNotifications";
 export function NotificationsPage() {
   const [filter, setFilter] = useState("All");
   const [page, setPage] = useState(1);
+  const [, forceUpdate] = useState(0);
 
-  const { notifications, totalPages, loading, error } = useNotifications();
+  const limit = 10;
+  const { notifications, totalPages, loading, error } = useNotifications(
+    page,
+    limit,
+    filter,
+  );
 
   const filteredNotifications =
-  filter === "All"
-    ? notifications
-    : notifications.filter((n) => n.Type === filter);
+    filter === "All"
+      ? notifications
+      : notifications.filter((n) => n.Type === filter);
 
-const priority = {
-  Placement: 3,
-  Result: 2,
-  Event: 1,
-};
+  const priority = {
+    Placement: 3,
+    Result: 2,
+    Event: 1,
+  };
 
-const sortedNotifications = [...filteredNotifications].sort((a, b) => {
-  const priorityDiff = priority[b.Type] - priority[a.Type];
+  const sortedNotifications = [...filteredNotifications].sort((a, b) => {
+    const priorityDiff = priority[b.Type] - priority[a.Type];
 
-  if (priorityDiff !== 0) {
-    return priorityDiff;
-  }
+    if (priorityDiff !== 0) {
+      return priorityDiff;
+    }
 
-  return new Date(b.Timestamp) - new Date(a.Timestamp);
-});
+    return new Date(b.Timestamp) - new Date(a.Timestamp);
+  });
 
-const topNotifications = sortedNotifications.slice(0, 10);
+  const start = (page - 1) * limit;
+  const end = start + limit;
+
+  const topNotifications = sortedNotifications.slice(start, end);
 
   const unreadCount = 2;
 
   const handleFilterChange = (newFilter) => {
-          setFilter(newFilter);
+    setFilter(newFilter);
     setPage(1);
   };
 
   const handlePageChange = (_, newPage) => {
-      setPage(newPage);
+    setPage(newPage);
   };
+
+const markAsViewed = (id) => {
+  const viewed =
+    JSON.parse(localStorage.getItem("viewed")) || [];
+
+  if (!viewed.includes(id)) {
+    viewed.push(id);
+
+    localStorage.setItem(
+      "viewed",
+      JSON.stringify(viewed)
+    );
+  }
+
+  forceUpdate((v) => v + 1);
+};
+
+  const viewedNotifications = JSON.parse(localStorage.getItem("viewed")) || [];
 
   return (
     <Box sx={{ maxWidth: 720, mx: "auto", px: 2, py: 4 }}>
@@ -88,25 +118,35 @@ const topNotifications = sortedNotifications.slice(0, 10);
 
       {!loading && !error && notifications.length > 0 && (
         <Stack spacing={1.5}>
-{topNotifications.map((n) => (
-  <Box
-    key={n.ID}
-    sx={{
-      border: "1px solid #ddd",
-      borderRadius: 2,
-      p: 2,
-      mb: 2,
-    }}
-  >
-    <Typography variant="h6">{n.Type}</Typography>
+          {topNotifications.map((n) => (
+            <Box
+              onClick={() => markAsViewed(n.ID)}
+              key={n.ID}
+              sx={{
+                border: "1px solid #ddd",
+                borderRadius: 2,
+                p: 2,
+                mb: 2,
+              }}
+            >
+              <Typography variant="h6">{n.Type}</Typography>
 
-    <Typography>{n.Message}</Typography>
+              <Typography
+                variant="caption"
+                color={
+                  viewedNotifications.includes(n.ID)
+                    ? "text.secondary"
+                    : "primary"
+                }
+              >
+                {viewedNotifications.includes(n.ID) ? "Viewed" : "New"}
+              </Typography>
 
-    <Typography variant="caption">
-      {n.Timestamp}
-    </Typography>
-  </Box>
-))}
+              <Typography>{n.Message}</Typography>
+
+              <Typography variant="caption">{n.Timestamp}</Typography>
+            </Box>
+          ))}
         </Stack>
       )}
 
@@ -124,7 +164,3 @@ const topNotifications = sortedNotifications.slice(0, 10);
     </Box>
   );
 }
-
-
-
-    
