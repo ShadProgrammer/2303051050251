@@ -11,24 +11,48 @@ import {
 } from "@mui/material";
 import NotificationsIcon from "@mui/icons-material/Notifications";
 
-import { NotificationCard } from "../components/NotificationCard";
+// import { NotificationCard } from "../components/NotificationCard";
 import { NotificationFilter } from "../components/NotificationFilter";
 import { useNotifications } from "../hooks/useNotifications";
 
 export function NotificationsPage() {
-  const [filter, setFilter] = useState();
-  const [page, setPage] = useState("1");
+  const [filter, setFilter] = useState("All");
+  const [page, setPage] = useState(1);
 
   const { notifications, totalPages, loading, error } = useNotifications();
+
+  const filteredNotifications =
+  filter === "All"
+    ? notifications
+    : notifications.filter((n) => n.Type === filter);
+
+const priority = {
+  Placement: 3,
+  Result: 2,
+  Event: 1,
+};
+
+const sortedNotifications = [...filteredNotifications].sort((a, b) => {
+  const priorityDiff = priority[b.Type] - priority[a.Type];
+
+  if (priorityDiff !== 0) {
+    return priorityDiff;
+  }
+
+  return new Date(b.Timestamp) - new Date(a.Timestamp);
+});
+
+const topNotifications = sortedNotifications.slice(0, 10);
 
   const unreadCount = 2;
 
   const handleFilterChange = (newFilter) => {
-
+          setFilter(newFilter);
+    setPage(1);
   };
 
   const handlePageChange = (_, newPage) => {
-
+      setPage(newPage);
   };
 
   return (
@@ -48,7 +72,7 @@ export function NotificationsPage() {
         <NotificationFilter value={filter} onChange={handleFilterChange} />
       </Box>
 
-      {true && (
+      {loading && (
         <Box display="flex" justifyContent="center" py={6}>
           <CircularProgress />
         </Box>
@@ -58,15 +82,31 @@ export function NotificationsPage() {
         <Alert severity="error">Failed to load notifications: {error}</Alert>
       )}
 
-      {loading && !error && notifications.length == "0" && (
-        <Alert severity="info">Something message</Alert>
+      {!loading && !error && notifications.length == 0 && (
+        <Alert severity="info">No notification found.</Alert>
       )}
 
-      {loading && !error && notifications.length > 0 && (
+      {!loading && !error && notifications.length > 0 && (
         <Stack spacing={1.5}>
-          {notifications.map((n) => (
-            <></>
-          ))}
+{topNotifications.map((n) => (
+  <Box
+    key={n.ID}
+    sx={{
+      border: "1px solid #ddd",
+      borderRadius: 2,
+      p: 2,
+      mb: 2,
+    }}
+  >
+    <Typography variant="h6">{n.Type}</Typography>
+
+    <Typography>{n.Message}</Typography>
+
+    <Typography variant="caption">
+      {n.Timestamp}
+    </Typography>
+  </Box>
+))}
         </Stack>
       )}
 
@@ -84,3 +124,7 @@ export function NotificationsPage() {
     </Box>
   );
 }
+
+
+
+    
